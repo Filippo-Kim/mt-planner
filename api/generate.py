@@ -3,7 +3,7 @@ import os
 import urllib.request
 import urllib.error
 
-GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent"
 
 SYSTEM_PROMPT = """너는 학과 MT·행사 기획 도우미야.
 아래 입력을 바탕으로 반드시 아래 JSON 스키마 그대로만 응답해.
@@ -67,11 +67,8 @@ def handle_post(environ):
     try:
         with urllib.request.urlopen(req, timeout=15) as res:
             result = json.loads(res.read())
-    except urllib.error.HTTPError as e:
-        detail = e.read().decode("utf-8", errors="replace")[:500]
-        return json_response("502 Bad Gateway", {
-            "error": f"[디버그] {e.code}: {detail}"
-        })
+    except urllib.error.HTTPError:
+        return json_response("502 Bad Gateway", {"error": "AI 서버에 일시적인 문제가 있어요. 잠시 후 다시 시도해 주세요."})
     except urllib.error.URLError:
         return json_response("504 Gateway Timeout", {"error": "응답이 지연되고 있어요. 다시 시도해 주세요."})
 
