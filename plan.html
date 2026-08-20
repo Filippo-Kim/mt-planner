@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>기획 시작하기 — MT Planner</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <header class="nav">
+    <a href="index.html" class="logo">MT Planner</a>
+    <nav>
+      <a href="index.html">홈</a>
+      <a href="plan.html" class="active">기획 시작하기</a>
+      <a href="checklist.html">준비물 계산기</a>
+      <a href="about.html">소개</a>
+    </nav>
+  </header>
+
+  <main class="page-content">
+    <h1>행사 정보를 입력하세요</h1>
+
+    <div class="form-group">
+      <label for="eventType">행사 종류</label>
+      <select id="eventType">
+        <option value="MT">MT</option>
+        <option value="세미나">세미나</option>
+        <option value="답사">답사</option>
+        <option value="뒷풀이">뒷풀이</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="headcount">인원 (명)</label>
+      <input type="number" id="headcount" min="1" placeholder="예: 30">
+    </div>
+
+    <div class="form-group">
+      <label for="duration">기간</label>
+      <select id="duration">
+        <option value="당일">당일</option>
+        <option value="1박2일">1박2일</option>
+        <option value="2박3일">2박3일</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="budget">1인 예산 (원)</label>
+      <input type="number" id="budget" min="0" placeholder="예: 50000">
+    </div>
+
+    <div class="form-group">
+      <label for="notes">컨셉·요청사항 (선택)</label>
+      <textarea id="notes" rows="3" placeholder="예: 술 안 마시는 사람 배려, 교수님 참석"></textarea>
+    </div>
+
+    <button id="generateBtn" class="btn-primary">기획안 생성하기</button>
+
+    <p id="statusMsg" class="status-msg" hidden></p>
+
+    <div id="resultBox" class="result-box" hidden></div>
+  </main>
+
+  <footer>
+    <p>&copy; 2026 MT Planner</p>
+  </footer>
+
+  <script src="js/ai.js"></script>
+</body>
+</html>
