@@ -1,4 +1,3 @@
-from http.server import BaseHTTPRequestHandler
 import json
 import os
 import urllib.request
@@ -35,64 +34,60 @@ def clean_json_text(text):
         text = text.rsplit("```", 1)[0]
     return text.strip()
 
-class handler(BaseHTTPRequestHandler):
-    def _send_json(self, status, payload):
-        self.send_response(status)
-        self.send_header("Content-type", "application/json")
-        self.end_headers()
-        self.wfile.write(json.dumps(payload, ensure_ascii=False).encode("utf-8"))
+def json_response(status, payload):
+    body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    headers = [("Content-Type", "application/json; charset=utf-8")]
+    return status, headers, body
 
-    def do_POST(self):
-        try:
-            length = int(self.headers.get("content-length", 0))
-            raw = self.rfile.read(length)
-            data = json.loads(raw)
-        except (ValueError, json.JSONDecodeError):
-            self._send_json(400, {"error": "요청 형식이 올바르지 않아요."})
-            return
+def handle_post(environ):
+    try:
+        length = int(environ.get("CONTENT_LENGTH", 0) or 0)
+        raw = environ["wsgi.input"].read(length)
+        data = json.loads(raw)
+    except (ValueError, json.JSONDecodeError, KeyError):
+        return json_response("400 Bad Request", {"error": "요청 형식이 올바르지 않아요."})
 
-        # 필수값 검증
-        if not data.get("headcount") or not data.get("budget"):
-            self._send_json(400, {"error": "인원과 1인 예산을 입력해 주세요."})
-            return
+    if not data.get("headcount") or not data.get("budget"):
+        return json_response("400 Bad Request", {"error": "인원과 1인 예산을 입력해 주세요."})
 
-        api_key = os.environ.get("GEMINI_API_KEY")
-        if not api_key:
-            self._send_json(500, {"error": "서버 설정 오류입니다. 관리자에게 문의해 주세요."})
-            return
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        return json_response("500 Internal Server Error", {"error": "서버 설정 오류입니다. 관리자에게 문의해 주세요."})
 
-        prompt = SYSTEM_PROMPT + "\n\n" + build_prompt(data)
+    prompt = SYSTEM_PROMPT + "\n\n" + build_prompt(data)
+    body = json.dumps({"contents": [{"parts": [{"text": prompt}]}]}).encode("utf-8")
 
-        body = json.dumps({
-            "contents": [{"parts": [{"text": prompt}]}]
-        }).encode("utf-8")
+    req = urllib.request.Request(
+        f"{GEMINI_URL}?key={api_key}",
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
 
-        req = urllib.request.Request(
-            f"{GEMINI_URL}?key={api_key}",
-            data=body,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as res:
+            result = json.loads(res.read())
+    except urllib.error.HTTPError:
+        return json_response("502 Bad Gateway", {"error": "AI 서버에 일시적인 문제가 있어요. 잠시 후 다시 시도해 주세요."})
+    except urllib.error.URLError:
+        return json_response("504 Gateway Timeout", {"error": "응답이 지연되고 있어요. 다시 시도해 주세요."})
 
-        try:
-            with urllib.request.urlopen(req, timeout=15) as res:
-                result = json.loads(res.read())
-        except urllib.error.HTTPError as e:
-            self._send_json(502, {"error": "AI 서버에 일시적인 문제가 있어요. 잠시 후 다시 시도해 주세요."})
-            return
-        except urllib.error.URLError:
-            self._send_json(504, {"error": "응답이 지연되고 있어요. 다시 시도해 주세요."})
-            return
+    try:
+        text = result["candidates"][0]["content"]["parts"][0]["text"]
+        cleaned = clean_json_text(text)
+        plan = json.loads(cleaned)
+    except (KeyError, IndexError, json.JSONDecodeError):
+        return json_response("502 Bad Gateway", {"error": "결과를 처리하는 중 문제가 발생했어요. 다시 시도해 주세요."})
 
-        try:
-            text = result["candidates"][0]["content"]["parts"][0]["text"]
-            cleaned = clean_json_text(text)
-            plan = json.loads(cleaned)
-        except (KeyError, IndexError, json.JSONDecodeError):
-            self._send_json(502, {"error": "결과를 처리하는 중 문제가 발생했어요. 다시 시도해 주세요."})
-            return
+    return json_response("200 OK", plan)
 
-        self._send_json(200, plan)
+def app(environ, start_response):
+    method = environ.get("REQUEST_METHOD", "GET")
 
-    def do_GET(self):
-        self._send_json(405, {"error": "POST 요청만 지원해요."})
+    if method == "POST":
+        status, headers, body = handle_post(environ)
+    else:
+        status, headers, body = json_response("405 Method Not Allowed", {"error": "POST 요청만 지원해요."})
+
+    start_response(status, headers)
+    return [body]
