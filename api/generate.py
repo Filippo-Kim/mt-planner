@@ -16,6 +16,7 @@ SYSTEM_PROMPT = """너는 학과 MT·행사 기획 도우미야.
   "budget": [{"category": "문자열", "amount": "문자열"}],
   "totalBudget": "문자열"
 }
+각 배열은 최대 6개 항목까지만 생성해. 설명은 짧고 간결하게 써.
 """
 
 def build_prompt(data):
@@ -65,7 +66,7 @@ def handle_post(environ):
     )
 
     try:
-        with urllib.request.urlopen(req, timeout=15) as res:
+        with urllib.request.urlopen(req, timeout=50) as res:
             result = json.loads(res.read())
     except urllib.error.HTTPError:
         return json_response("502 Bad Gateway", {"error": "AI 서버에 일시적인 문제가 있어요. 잠시 후 다시 시도해 주세요."})

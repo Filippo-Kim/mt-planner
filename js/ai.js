@@ -23,9 +23,9 @@ document.getElementById("generateBtn").addEventListener("click", async () => {
   statusMsg.className = "status-msg";
   btn.disabled = true;
 
-  // 2) 타임아웃 처리 (15초)
+  // 2) 타임아웃 처리 (55초)
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  const timeoutId = setTimeout(() => controller.abort(), 55000);
 
   try {
     const res = await fetch("/api/generate", {
